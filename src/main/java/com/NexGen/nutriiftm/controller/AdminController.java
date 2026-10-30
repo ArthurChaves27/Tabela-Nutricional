@@ -14,13 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
  * Painel administrativo: visão consolidada de todos os rótulos gerados
  * no sistema, com estatísticas e gráficos de barra (Chart.js).
  *
- * Protegido pelo AuthInterceptor (login obrigatório) igual ao resto do
- * sistema — /admin/** não está na lista de rotas públicas em WebConfig.
- * Como só administradores conseguem criar sessão (ver
- * AuthController.criarSessao), qualquer sessão válida aqui já é de um
- * administrador. Se no futuro contas não-admin passarem a poder logar
- * (ex: para uma área "meus rótulos"), adicionar aqui uma checagem
- * explícita de usuarioLogado.isAdmin() antes de liberar o acesso.
+ * Protegido pelo AuthInterceptor: exige sessão válida e papel administrativo.
  */
 @Slf4j
 @Controller

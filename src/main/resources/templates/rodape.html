@@ -1,5 +1,21 @@
-<div th:fragment="rodape">
-    <img th:src="@{/images/udif.png}" width="30%" alt="#"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img th:src="@{/images/udi.png}" width="30%" alt="#"/>
+<div
+  th:fragment="rodape"
+  style="
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 40px;
+    padding: 20px 0;
+  "
+>
+  <img
+    th:src="@{/images/udif.png}"
+    style="max-height: 50px; width: auto"
+    alt="IFTM Campus Uberlândia"
+  />
+  <img
+    th:src="@{/images/udi.png}"
+    style="max-height: 50px; width: auto"
+    alt="IFTM Campus Uberlândia Centro"
+  />
 </div>

@@ -1,6 +1,8 @@
 package com.NexGen.nutriiftm.controller;
 
 import com.NexGen.nutriiftm.model.TabelaNutricional;
+import com.NexGen.nutriiftm.repository.UsuarioRepository;
+import com.NexGen.nutriiftm.security.RotuloAuthorizationService;
 import com.NexGen.nutriiftm.service.ElementoService;
 import com.NexGen.nutriiftm.service.ProdutoService;
 import com.NexGen.nutriiftm.service.TabelaNutricionalService;
@@ -8,6 +10,7 @@ import com.NexGen.nutriiftm.service.UnidadeMedidaService;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +19,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 
 @Controller
 @RequestMapping("/tabela")
@@ -26,6 +32,8 @@ public class TabelaNutricionalController {
     private final ProdutoService produtoService;
     private final ElementoService elementoService;
     private final UnidadeMedidaService unidadeService;
+    private final UsuarioRepository usuarioRepository;
+    private final RotuloAuthorizationService rotuloAuthorizationService;
 
     // =========================
     // LISTAR
@@ -96,13 +104,18 @@ public class TabelaNutricionalController {
             Double tabTotalColheres,
 
             @RequestParam(required = false)
-            Double tabVD
+            Double tabVD,
+
+            HttpServletRequest request
     ) {
         boolean isInsert = (tabCodigo == null);
 
         TabelaNutricional t = isInsert
                 ? new TabelaNutricional()
                 : tabelaService.buscarPorId(tabCodigo);
+        if (!isInsert) {
+            rotuloAuthorizationService.exigirPermissaoDeEdicao(t, request);
+        }
 
         t.setProduto(produtoService.buscarPorId(produtoId));
         t.setUnidadeMedida(unidadeService.buscarPorId(unidadeId));
@@ -112,6 +125,14 @@ public class TabelaNutricionalController {
         t.setTabTotalPorcao(tabTotalPorcao != null ? tabTotalPorcao : 0.0);
         t.setTabTotalColheres(tabTotalColheres != null ? tabTotalColheres : 0.0);
         t.setTabVD(tabVD != null ? tabVD : 0.0);
+
+        if (isInsert) {
+            HttpSession session = request.getSession(false);
+            if (session != null && session.getAttribute("uid") instanceof String uid) {
+                t.setUsuario(usuarioRepository.findByFirebaseUid(uid)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED)));
+            }
+        }
 
         TabelaNutricional salva = tabelaService.salvar(t);
 
@@ -127,8 +148,10 @@ public class TabelaNutricionalController {
     // =========================
 
     @GetMapping("/alterar/{id}")
-    public String formAlterar(@PathVariable Long id, Model model) {
-        model.addAttribute("tabela", tabelaService.buscarPorId(id));
+    public String formAlterar(@PathVariable Long id, HttpServletRequest request, Model model) {
+        TabelaNutricional tabela = tabelaService.buscarPorId(id);
+        rotuloAuthorizationService.exigirPermissaoDeEdicao(tabela, request);
+        model.addAttribute("tabela", tabela);
         model.addAttribute("produtos", produtoService.listarTodos());
         model.addAttribute("unidades", unidadeService.listarTodos());
         model.addAttribute("elementos", elementoService.listarTodos());
@@ -140,13 +163,16 @@ public class TabelaNutricionalController {
     // =========================
 
     @GetMapping("/remover/{id}")
-    public String formRemover(@PathVariable Long id, Model model) {
-        model.addAttribute("tabela", tabelaService.buscarPorId(id));
+    public String formRemover(@PathVariable Long id, HttpServletRequest request, Model model) {
+        TabelaNutricional tabela = tabelaService.buscarPorId(id);
+        rotuloAuthorizationService.exigirPermissaoDeEdicao(tabela, request);
+        model.addAttribute("tabela", tabela);
         return "removerTabela";
     }
 
     @PostMapping("/remover/{id}")
-    public String remover(@PathVariable Long id) {
+    public String remover(@PathVariable Long id, HttpServletRequest request) {
+        rotuloAuthorizationService.exigirPermissaoDeEdicao(tabelaService.buscarPorId(id), request);
         tabelaService.deletar(id);
         return "redirect:/tabela";
     }

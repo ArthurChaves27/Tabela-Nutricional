@@ -184,9 +184,9 @@
       });
 
       if (resp.ok) {
-        window.location.href = "/admin/dashboard";
-      } else if (resp.status === 403) {
-        mostrarErro("Conta criada! Mas o acesso ao sistema é restrito a administradores — peça a um administrador para liberar sua conta.");
+        window.location.href = resp.headers.get("X-Admin") === "true"
+          ? "/admin/dashboard"
+          : "/perfil";
       } else {
         mostrarErro("Conta criada, mas falhou ao autenticar no servidor. Tente entrar normalmente.");
       }

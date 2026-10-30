@@ -8,16 +8,13 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 /**
  * Registra o AuthInterceptor.
  *
- * Modelo de acesso do sistema: só o Painel Administrativo (/admin/**)
- * exige login. Todo o restante — cadastro/edição/remoção de produtos,
- * cooperativas, fabricantes, nutrientes, tabelas, calculadora, etc. —
- * é público, pensado para produtores/cooperativas usarem sem precisar
- * de conta.
+ * O painel administrativo exige conta com papel de administrador. O
+ * perfil, sua edição e as ações sociais exigem sessão. Os demais recursos
+ * seguem públicos para produtores/cooperativas usarem sem conta.
  *
  * IMPORTANTE: sempre que você criar uma página nova que deva exigir
- * login, coloque-a sob "/admin/**" (ou adicione o padrão dela aqui em
- * addPathPatterns) — por padrão, tudo que não está listado aqui fica
- * público.
+ * login, adicione o padrão dela em addPathPatterns; por padrão, tudo que
+ * não está listado aqui fica público.
  */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
@@ -25,9 +22,20 @@ public class WebConfig implements WebMvcConfigurer {
     @Autowired
     private AuthInterceptor authInterceptor;
 
+    @Autowired
+    private CsrfInterceptor csrfInterceptor;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(authInterceptor)
-                .addPathPatterns("/admin/**");
+                .addPathPatterns(
+                        "/admin",
+                        "/admin/**",
+                        "/perfil",
+                        "/perfil/**"
+                );
+        registry.addInterceptor(csrfInterceptor)
+                .addPathPatterns("/perfil")
+                .addPathPatterns("/perfil/**");
     }
 }

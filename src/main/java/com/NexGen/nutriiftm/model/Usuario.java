@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Representa, no banco de dados local, o usuário que já existe no
@@ -47,6 +49,12 @@ public class Usuario {
     @Column(name = "usu_foto_url", length = 500)
     private String fotoUrl;
 
+    @Column(name = "usu_cidade", length = 100)
+    private String cidade;
+
+    @Column(name = "usu_estado", length = 2)
+    private String estado;
+
     @Column(name = "usu_criado_em", nullable = false)
     private LocalDateTime criadoEm;
 
@@ -54,12 +62,21 @@ public class Usuario {
     private LocalDateTime ultimoLogin;
 
     /**
-     * Papel de administrador. Somente usuários com admin = true conseguem
-     * criar sessão (login) — ver AuthController.criarSessao(). Contas novas
-     * (cadastro.html) nascem com admin = false e precisam ser promovidas
-     * manualmente no banco:
+     * Papel de administrador. Contas novas podem usar o perfil, mas só
+     * usuários com admin = true acessam o painel administrativo:
      *   UPDATE usuario SET usu_admin = 1 WHERE usu_email = '...';
      */
     @Column(name = "usu_admin", nullable = false)
     private boolean admin;
+
+    @ManyToMany
+    @JoinTable(
+            name = "usuario_seguindo",
+            joinColumns = @JoinColumn(name = "seguidor_codigo"),
+            inverseJoinColumns = @JoinColumn(name = "seguido_codigo")
+    )
+    private Set<Usuario> seguindo = new HashSet<>();
+
+    @ManyToMany(mappedBy = "seguindo")
+    private Set<Usuario> seguidores = new HashSet<>();
 }

@@ -55,22 +55,18 @@ public class AuthController {
 
             Usuario usuario = sincronizarUsuarioLocal(decoded);
 
-            // Somente administradores conseguem criar sessão. O restante do
-            // sistema (fora das rotas públicas de visualização de rótulo)
-            // é uma área administrativa protegida por login.
-            if (!usuario.isAdmin()) {
-                log.warn("Login negado (conta sem permissão de administrador): {}", decoded.getEmail());
-                return ResponseEntity.status(403).build();
-            }
-
             HttpSession session = request.getSession(true); // cria se não existir
+            request.changeSessionId();
+            session.removeAttribute("csrfToken");
             session.setAttribute("uid", decoded.getUid());
             session.setAttribute("email", decoded.getEmail());
             session.setAttribute("nome", decoded.getName());
-            session.setAttribute("admin", true);
+            session.setAttribute("admin", usuario.isAdmin());
 
-            log.info("Sessão criada para administrador {}", decoded.getEmail());
-            return ResponseEntity.ok().build();
+            log.info("Sessão criada para usuário {}", decoded.getEmail());
+            return ResponseEntity.ok()
+                    .header("X-Admin", Boolean.toString(usuario.isAdmin()))
+                    .build();
 
         } catch (FirebaseAuthException e) {
             log.warn("Token do Firebase inválido/expirado: {}", e.getMessage());
@@ -81,8 +77,8 @@ public class AuthController {
     /**
      * Cria o registro local na primeira vez que o uid aparece, ou apenas
      * atualiza nome/email/último login se o usuário já existir. Contas
-     * novas nascem com admin = false (ver Usuario.admin) e precisam ser
-     * promovidas manualmente no banco para conseguir logar.
+     * novas nascem com admin = false e só precisam ser promovidas para
+     * acessar o painel administrativo.
      */
     private Usuario sincronizarUsuarioLocal(FirebaseToken decoded) {
         LocalDateTime agora = LocalDateTime.now();
@@ -98,7 +94,10 @@ public class AuthController {
 
         usuario.setEmail(decoded.getEmail());
         usuario.setNome(decoded.getName());
-        usuario.setFotoUrl(decoded.getPicture());
+        if ((usuario.getFotoUrl() == null || usuario.getFotoUrl().isBlank())
+                && decoded.getPicture() != null && !decoded.getPicture().isBlank()) {
+            usuario.setFotoUrl(decoded.getPicture());
+        }
         usuario.setUltimoLogin(agora);
 
         return usuarioRepository.save(usuario);

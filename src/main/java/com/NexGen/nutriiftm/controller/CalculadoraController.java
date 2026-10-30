@@ -6,12 +6,16 @@ import com.NexGen.nutriiftm.service.*;
 import com.NexGen.nutriiftm.repository.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -38,6 +42,7 @@ public class CalculadoraController {
     private final UnidadeMedidaService     unidadeService;
     private final ElementoRepository       elementoRepo;
     private final TabNutElementoRepository tneRepo;
+    private final UsuarioRepository       usuarioRepo;
     private final ObjectMapper             objectMapper;  // injetado pelo Spring Boot
 
     private static final int MAX_PORCOES = 9999;
@@ -198,6 +203,7 @@ public class CalculadoraController {
             @RequestParam(required = false) String  ingredientesJson,
             @RequestParam(required = false) String  medidaCaseira,
             @RequestParam(required = false) String  rotuloJson,
+            HttpServletRequest request,
             Model model
     ) {
         // CORREÇÃO #10: Jackson em vez de regex caseiro
@@ -235,6 +241,11 @@ public class CalculadoraController {
         }
 
         TabelaNutricional tabela = new TabelaNutricional();
+        HttpSession session = request.getSession(false);
+        if (session != null && session.getAttribute("uid") instanceof String uid) {
+            tabela.setUsuario(usuarioRepo.findByFirebaseUid(uid)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED)));
+        }
         tabela.setProduto(produto);
         tabela.setUnidadeMedida(unidadeService.buscarPorId(unidadeId));
         tabela.setTabPorcao(porcao);

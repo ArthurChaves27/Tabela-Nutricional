@@ -19,6 +19,7 @@ public interface TabelaNutricionalRepository extends JpaRepository<TabelaNutrici
     @Query("SELECT t FROM TabelaNutricional t " +
            "LEFT JOIN FETCH t.produto " +
            "LEFT JOIN FETCH t.unidadeMedida " +
+           "LEFT JOIN FETCH t.usuario " +
            "LEFT JOIN FETCH t.tneElementos tne " +
            "LEFT JOIN FETCH tne.elemento " +
            "WHERE t.tabCodigo = :id")

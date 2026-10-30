@@ -15,7 +15,12 @@
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;500;600;700&family=Roboto:wght@500&display=swap');
-
+    body{
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+    }
     .nutri-login-wrap {
       display: flex;
       min-height: 100vh;
@@ -409,9 +414,9 @@
         headers: { "Authorization": "Bearer " + token }
       });
       if (resp.ok) {
-        window.location.href = "/admin/dashboard";
-      } else if (resp.status === 403) {
-        alert("Esta conta não tem permissão de administrador. Peça a um administrador para liberar seu acesso.");
+        window.location.href = resp.headers.get("X-Admin") === "true"
+          ? "/admin/dashboard"
+          : "/perfil";
       } else {
         alert("Falha ao autenticar no servidor.");
       }
