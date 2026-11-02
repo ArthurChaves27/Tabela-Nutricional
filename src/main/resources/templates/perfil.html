@@ -265,9 +265,9 @@
         <a href="#sobre" class="side-link active" data-tab="sobre">
           <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20v-1a8 8 0 0 1 16 0v1"/></svg>Perfil
         </a>
-        <a href="#rotulos" class="side-link" data-tab="rotulos"
-           th:text="${proprioPerfil ? 'Meus Rótulos' : 'Rótulos'}">
-          <svg class="ic" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>Meus Rótulos
+        <a href="#rotulos" class="side-link" data-tab="rotulos">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          <span th:text="${proprioPerfil ? 'Meus Rótulos' : 'Rótulos'}">Meus Rótulos</span>
         </a>
         <a href="#seguindo" class="side-link" data-tab="seguindo">
           <svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Seguindo
@@ -275,16 +275,12 @@
         <a href="#seguidores" class="side-link" data-tab="seguidores">
           <svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Seguidores
         </a>
-        <a href="#rotulos" class="side-link" data-tab="rotulos"
-           th:text="${proprioPerfil ? 'Meus Rótulos' : 'Rótulos'}">
-          <svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="14" y2="17"/></svg>Rótulos
-        </a>
-        <a th:if="${proprioPerfil}" href="#editar" class="side-link" th:text="'Editar Perfil'">
-          <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Configurações
+        <a th:if="${proprioPerfil}" href="#editar" class="side-link">
+          <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Editar Perfil
         </a>
       </nav>
-
-      <!-- ══════ CENTRO (ABAS) ══════ -->
+            <!-- ══════ CENTRO (ABAS) ══════ -->
       <section class="card center">
         <div class="tabs" role="tablist">
           <button type="button" class="tab-btn active" data-tab="sobre" role="tab">Sobre</button>
@@ -415,8 +411,9 @@
         <!-- Estatísticas -->
         <section class="card side-card">
           <div class="side-head">
-            <h2 th:text="${proprioPerfil ? 'Meus Rótulos' : 'Rótulos de ' + (usuarioPerfil.nome ?: 'usuário')}">
-              <svg class="ic" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Estatísticas
+            <h2>
+              <svg class="ic" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              <span>Estatísticas</span>
             </h2>
           </div>
           <div class="stats">
@@ -441,9 +438,10 @@
         <!-- Meus Rótulos (3 primeiros) -->
         <section class="card side-card">
           <div class="side-head">
-            <h2 th:text="${proprioPerfil ? 'Pessoas que você segue' : 'Pessoas que este usuário segue'}">
-              <svg class="ic" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Meus Rótulos
-            </h2>
+            <h2>
+              <svg class="ic" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              <span th:text="${proprioPerfil ? 'Meus Rótulos' : 'Rótulos de ' + (usuarioPerfil.nome ?: 'usuário')}">Meus Rótulos</span>
+            </h2>      
             <a th:href="@{/tabela}" class="ver-todos">Ver todos
               <svg class="ic" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </a>
@@ -466,7 +464,8 @@
         <section class="card side-card">
           <div class="side-head">
             <h2>
-              <svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Pessoas que você segue
+              <svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span th:text="${proprioPerfil ? 'Pessoas que você segue' : 'Pessoas que este usuário segue'}">Pessoas que você segue</span>
             </h2>
             <a href="#seguindo" class="ver-todos" data-tab="seguindo">Ver todos
               <svg class="ic" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -518,10 +517,30 @@
         });
       });
 
+      /* Abre a aba "Sobre" e leva o usuário até o formulário de edição */
+      function irParaEditar(e) {
+        if (e) e.preventDefault();
+        mostrar('sobre');
+        var alvo = document.getElementById('editar');
+        if (!alvo) return; // só existe no próprio perfil
+        alvo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        var campo = alvo.querySelector('input[name="cidade"]');
+        if (campo) campo.focus({ preventScroll: true });
+        try { history.replaceState(null, '', '#editar'); } catch (err) {}
+      }
+
+      document.querySelectorAll('.perfil-page a[href="#editar"]').forEach(function (a) {
+        a.addEventListener('click', irParaEditar);
+      });
+
       var requestedTab = new URLSearchParams(location.search).get('aba');
       var hash = location.hash.replace('#', '');
-      mostrar(NOMES.indexOf(requestedTab) > -1 ? requestedTab : NOMES.indexOf(hash) > -1 ? hash : 'sobre');
 
+      if (hash === 'editar' && !requestedTab) {
+        irParaEditar(); // cobre o redirect de erro do servidor: /perfil#editar
+      } else {
+        mostrar(NOMES.indexOf(requestedTab) > -1 ? requestedTab : NOMES.indexOf(hash) > -1 ? hash : 'sobre');
+      }  
       var btn = document.getElementById('avatarBtn');
       var input = document.getElementById('avatarInput');
       if (btn && input) {

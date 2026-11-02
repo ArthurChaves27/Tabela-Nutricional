@@ -46,8 +46,8 @@
               <div class="idx-user-email" th:text="${usuarioLogado.email}">email@exemplo.com</div>
             </div>
             <div class="idx-user-divider"></div>
-            <a th:href="@{/tabela}" class="idx-user-item">Meus Rótulos</a>
-            <a href="#" class="idx-user-item">Perfil</a>
+            <a th:href="@{/perfil#rotulos}" class="idx-user-item">Meus Rótulos</a>
+              <a th:href="@{/perfil}" class="idx-user-item">Perfil</a>
             <a th:href="@{/recuperar-senha}" class="idx-user-item">Alterar senha</a>
             <div class="idx-user-divider"></div>
             <a href="#" id="idxLogoutBtn" class="idx-user-item idx-user-item-logout">Logout</a>
