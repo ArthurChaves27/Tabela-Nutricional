@@ -292,6 +292,17 @@
       opacity: 8%;
     }
 
+    .nutri-login-erro {
+      background: #3a1414;
+      border: 1px solid #7a2b2b;
+      color: #f5c6c6;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13.5px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
     @media (max-width: 840px) {
       .nutri-login-wrap { flex-direction: column; }
       .nutri-login-photo { display: none; }
@@ -319,6 +330,8 @@
         <img class="nutri-login-logo" th:src="@{/images/logo.png}" src="/images/logo.png" alt="Logo"/>
 
         <h1 class="nutri-login-title">Entrar na Conta</h1>
+
+        <div id="erroMsg" class="nutri-login-erro" role="alert"></div>
 
         <form th:action="@{/login}" method="post">
 
@@ -388,8 +401,47 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
+    const erroMsg = document.getElementById("erroMsg");
+
+    function mostrarErro(texto) {
+      erroMsg.textContent = texto;
+      erroMsg.style.display = "block";
+    }
+
+    function limparErro() {
+      erroMsg.style.display = "none";
+    }
+
+    function traduzErro(codigo) {
+      switch (codigo) {
+        case "auth/invalid-credential":
+        case "auth/invalid-login-credentials":
+        case "auth/wrong-password":
+        case "auth/user-not-found":
+          return "E-mail ou senha incorretos.";
+        case "auth/invalid-email":
+          return "Digite um e-mail válido.";
+        case "auth/missing-password":
+          return "Digite sua senha.";
+        case "auth/too-many-requests":
+          return "Muitas tentativas. Aguarde alguns minutos ou redefina sua senha.";
+        case "auth/user-disabled":
+          return "Esta conta foi desativada.";
+        case "auth/network-request-failed":
+          return "Falha de conexão. Verifique sua internet.";
+        case "auth/popup-closed-by-user":
+        case "auth/cancelled-popup-request":
+          return null; // usuário fechou o popup: não é erro
+        case "auth/popup-blocked":
+          return "O navegador bloqueou a janela do Google. Libere os pop-ups e tente de novo.";
+        default:
+          return "Não foi possível entrar. Tente novamente.";
+      }
+    }
+
     document.querySelector("form").addEventListener("submit", async (e) => {
       e.preventDefault();
+      limparErro();
       const email = document.getElementById("email").value;
       const senha = document.getElementById("senha").value;
       try {
@@ -397,15 +449,22 @@
         const token = await cred.user.getIdToken();
         await enviarTokenParaBackend(token);
       } catch (err) {
-        alert("Erro ao entrar: " + err.message);
+        const msg = traduzErro(err.code);
+        if (msg) mostrarErro(msg);
       }
     });
 
     document.querySelector(".gsi-material-button").addEventListener("click", async () => {
-      const provider = new GoogleAuthProvider();
-      const cred = await signInWithPopup(auth, provider);
-      const token = await cred.user.getIdToken();
-      await enviarTokenParaBackend(token);
+      limparErro();
+      try {
+        const provider = new GoogleAuthProvider();
+        const cred = await signInWithPopup(auth, provider);
+        const token = await cred.user.getIdToken();
+        await enviarTokenParaBackend(token);
+      } catch (err) {
+        const msg = traduzErro(err.code);
+        if (msg) mostrarErro(msg);
+      }
     });
 
     async function enviarTokenParaBackend(token) {
@@ -418,7 +477,7 @@
           ? "/admin/dashboard"
           : "/perfil";
       } else {
-        alert("Falha ao autenticar no servidor.");
+        mostrarErro("Não foi possível iniciar a sessão. Tente novamente.");
       }
     }
   </script>
