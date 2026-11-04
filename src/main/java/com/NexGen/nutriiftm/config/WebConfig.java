@@ -5,6 +5,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.CacheControl;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
 /**
  * Registra o AuthInterceptor.
  *
@@ -18,6 +23,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
+    
+    @Value("${app.uploads.dir:./uploads}")
+    private String uploadsDir;  
 
     @Autowired
     private AuthInterceptor authInterceptor;
@@ -37,5 +45,13 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(csrfInterceptor)
                 .addPathPatterns("/perfil")
                 .addPathPatterns("/perfil/**");
+    }
+    
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        String raiz = Path.of(uploadsDir).toAbsolutePath().normalize().toString();
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:" + raiz + "/")
+                .setCacheControl(CacheControl.maxAge(30, TimeUnit.DAYS).cachePublic());
     }
 }

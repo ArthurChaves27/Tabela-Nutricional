@@ -232,7 +232,7 @@
           <button th:if="${proprioPerfil}" type="button" class="avatar-cam" id="avatarBtn" aria-label="Alterar foto de perfil">
             <svg class="ic" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
           </button>
-          <input th:if="${proprioPerfil}" type="file" id="avatarInput" accept="image/jpeg,image/png,image/webp" hidden/>
+          <input th:if="${proprioPerfil}" type="file" id="avatarInput" accept="image/jpeg,image/png" hidden/>
         </div>
 
         <div class="head-info">
@@ -549,119 +549,56 @@
     })();
   </script>
 
-  <script type="module" th:if="${proprioPerfil}" th:inline="javascript">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
+  <script th:if="${proprioPerfil}" th:inline="javascript">
+    (function () {
+      var csrfToken = /*[[${csrfToken}]]*/ "";
+      var status = document.getElementById("fotoStatus");
+      var fileInput = document.getElementById("avatarInput");
+      var avatar = document.getElementById("avatarImg");
+      var tiposOk = ["image/jpeg", "image/png"];
 
-    const firebaseConfig = {
-      apiKey: /*[[${firebaseWeb.apiKey}]]*/ "",
-      authDomain: /*[[${firebaseWeb.authDomain}]]*/ "",
-      projectId: /*[[${firebaseWeb.projectId}]]*/ "",
-      storageBucket: /*[[${firebaseWeb.storageBucket}]]*/ "",
-      messagingSenderId: /*[[${firebaseWeb.messagingSenderId}]]*/ "",
-      appId: /*[[${firebaseWeb.appId}]]*/ ""
-    };
-    const csrfToken = /*[[${csrfToken}]]*/ "";
-
-    const status = document.getElementById("fotoStatus");
-    const fileInput = document.getElementById("avatarInput");
-    const avatar = document.getElementById("avatarImg");
-    const imageExtensions = {
-      "image/jpeg": "jpg",
-      "image/png": "png",
-      "image/webp": "webp"
-    };
-
-    function currentUser(auth) {
-      return new Promise((resolve, reject) => {
-        let unsubscribe = () => {};
-        unsubscribe = onAuthStateChanged(auth, user => {
-          unsubscribe();
-          resolve(user);
-        }, reject);
-      });
-    }
-
-    function ownedProfilePhotoPath(url, uid) {
-      try {
-        const parsed = new URL(url);
-        const marker = "/o/";
-        if (parsed.hostname !== "firebasestorage.googleapis.com" || !parsed.pathname.includes(marker)) {
-          return null;
-        }
-        const encodedObject = parsed.pathname.slice(parsed.pathname.indexOf(marker) + marker.length);
-        const objectPath = decodeURIComponent(encodedObject);
-        const prefix = `profile-photos/${uid}/`;
-        return objectPath.startsWith(prefix)
-          && /^avatar-[0-9]+\.(jpg|png|webp)$/.test(objectPath.slice(prefix.length))
-          ? objectPath
-          : null;
-      } catch {
-        return null;
-      }
-    }
-
-    fileInput.addEventListener("change", async () => {
-      const file = fileInput.files && fileInput.files[0];
-      if (!file) return;
-
-      const extension = imageExtensions[file.type];
-      if (!extension || file.size > 5 * 1024 * 1024) {
-        status.textContent = "Escolha uma imagem JPG, PNG ou WEBP de até 5 MB.";
+      function erro(msg) {
         status.classList.add("error");
-        fileInput.value = "";
-        return;
+        status.textContent = msg;
       }
 
-      status.classList.remove("error");
-      status.textContent = "Enviando foto...";
-      try {
-        if (!firebaseConfig.apiKey || !firebaseConfig.storageBucket) {
-          throw new Error("Firebase Storage ainda não está configurado neste ambiente.");
-        }
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const user = await currentUser(auth);
-        if (!user) {
-          throw new Error("Entre novamente com sua conta Firebase para enviar a foto.");
+      fileInput.addEventListener("change", async function () {
+        var file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+
+        if (tiposOk.indexOf(file.type) === -1 || file.size > 5 * 1024 * 1024) {
+          erro("Escolha uma imagem JPG ou PNG de até 5 MB.");
+          fileInput.value = "";
+          return;
         }
 
-        const storage = getStorage(app);
-        const previousObjectPath = ownedProfilePhotoPath(avatar.src, user.uid);
-        const objectPath = `profile-photos/${user.uid}/avatar-${Date.now()}.${extension}`;
-        const uploaded = await uploadBytes(ref(storage, objectPath), file, { contentType: file.type });
-        const photoUrl = await getDownloadURL(uploaded.ref);
-        const response = await fetch("/perfil/foto", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": csrfToken },
-          body: JSON.stringify({ photoUrl })
-        });
-        if (!response.ok) {
-          throw new Error("A imagem foi enviada, mas não foi possível salvar a foto no perfil.");
-        }
+        status.classList.remove("error");
+        status.textContent = "Enviando foto...";
 
-        avatar.src = photoUrl;
-        if (previousObjectPath && previousObjectPath !== objectPath) {
-          try {
-            await deleteObject(ref(storage, previousObjectPath));
-            status.textContent = "Foto de perfil atualizada.";
-          } catch (cleanupError) {
-            status.classList.add("error");
-            status.textContent = "Foto atualizada, mas a imagem anterior não foi removida: "
-              + (cleanupError.message || "erro do Firebase Storage.");
+        var dados = new FormData();
+        dados.append("foto", file);
+
+        try {
+          var resp = await fetch("/perfil/foto", {
+            method: "POST",
+            headers: { "X-CSRF-TOKEN": csrfToken }, // não defina Content-Type: o navegador faz isso
+            body: dados
+          });
+          var corpo = await resp.json().catch(function () { return {}; });
+          if (!resp.ok) {
+            throw new Error(corpo.erro || "Não foi possível salvar a foto.");
           }
-        } else {
+          avatar.src = corpo.photoUrl;
+          var menuImg = document.querySelector("#userBtn img, #idxUserBtn img");
+          if (menuImg) menuImg.src = corpo.photoUrl;
           status.textContent = "Foto de perfil atualizada.";
+        } catch (e) {
+          erro(e.message || "Não foi possível enviar a foto.");
+        } finally {
+          fileInput.value = "";
         }
-      } catch (error) {
-        status.classList.add("error");
-        status.textContent = error.message || "Não foi possível enviar a foto.";
-      } finally {
-        fileInput.value = "";
-      }
-    });
+      });
+    })();
   </script>
-
 </body>
 </html>

@@ -1,239 +1,154 @@
 package com.NexGen.nutriiftm.controller;
 
-import com.NexGen.nutriiftm.config.FirebaseWebConfig.FirebaseWeb;
 import com.NexGen.nutriiftm.config.CsrfTokenService;
-import com.NexGen.nutriiftm.model.Usuario;
-import com.NexGen.nutriiftm.repository.UsuarioRepository;
-import com.NexGen.nutriiftm.service.TabelaNutricionalService;
+import com.NexGen.nutriiftm.service.PerfilService;
+import com.NexGen.nutriiftm.service.PerfilService.PerfilView;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.net.URI;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.time.format.DateTimeFormatter;
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.List;
-import java.util.Set;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+import java.io.IOException;
+import java.util.Map;
+import java.util.NoSuchElementException;
 
 @Controller
 @RequiredArgsConstructor
 public class PerfilController {
 
-    private static final DateTimeFormatter DATA_MEMBRO_FORMAT =
-            DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
-    private final UsuarioRepository usuarioRepository;
-    private final TabelaNutricionalService tabelaNutricionalService;
-    private final FirebaseWeb firebaseWeb;
+    private final PerfilService perfilService;
     private final CsrfTokenService csrfTokenService;
 
     @GetMapping("/perfil")
-    @Transactional(readOnly = true)
-    public String meuPerfil(
-            HttpServletRequest request,
-            @RequestParam(defaultValue = "0") int pagina,
-            Model model) {
-        Usuario usuario = usuarioDaSessao(request);
-        if (usuario == null) {
+    public String meuPerfil(@RequestParam(defaultValue = "0") int pagina,
+                            HttpServletRequest request, Model model) {
+        String uid = uidDaSessao(request);
+        if (uid == null) {
             return "redirect:/login";
         }
-        preencherPerfil(usuario, usuario, model, request, pagina);
-        return "perfil";
+        return perfilService.carregarPerfil(null, uid, pagina)
+                .map(view -> montarPagina(view, model, request))
+                .orElse("redirect:/login");
     }
 
     @GetMapping("/perfil/{id:\\d+}")
-    @Transactional(readOnly = true)
-    public String perfilPublico(@PathVariable Long id, HttpServletRequest request, Model model) {
-        Usuario usuarioPerfil = usuarioRepository.findProfileById(id).orElse(null);
-        if (usuarioPerfil == null) {
-            return "redirect:/perfil";
-        }
-        Usuario usuarioLogado = usuarioDaSessao(request);
-        if (usuarioLogado == null) {
+    public String perfilPublico(@PathVariable Long id,
+                                HttpServletRequest request, Model model) {
+        String uid = uidDaSessao(request);
+        if (uid == null) {
             return "redirect:/login";
         }
-        preencherPerfil(usuarioPerfil, usuarioLogado, model, request, 0);
-        return "perfil";
+        return perfilService.carregarPerfil(id, uid, 0)
+                .map(view -> montarPagina(view, model, request))
+                .orElse("redirect:/perfil");
     }
 
     @GetMapping({"/perfil/salvar", "/perfil/foto"})
     public void getEmRotaPost() {
-        throw new org.springframework.web.server.ResponseStatusException(HttpStatus.METHOD_NOT_ALLOWED);
+        throw new ResponseStatusException(HttpStatus.METHOD_NOT_ALLOWED);
     }
 
     @PostMapping("/perfil/salvar")
-    @Transactional
-    public String salvarPerfil(
-            @RequestParam(required = false) String cidade,
-            @RequestParam(required = false) String estado,
-            HttpServletRequest request,
-            RedirectAttributes redirectAttributes) {
-
-        Usuario usuario = usuarioDaSessao(request);
-        if (usuario == null) {
+    public String salvarPerfil(@RequestParam(required = false) String cidade,
+                               @RequestParam(required = false) String estado,
+                               HttpServletRequest request,
+                               RedirectAttributes redirectAttributes) {
+        String uid = uidDaSessao(request);
+        if (uid == null) {
             return "redirect:/login";
         }
-
-        String cidadeLimpa = cidade == null ? "" : cidade.trim();
-        String estadoLimpo = estado == null ? "" : estado.trim().toUpperCase(Locale.ROOT);
-        if (cidadeLimpa.length() > 100 || estadoLimpo.length() > 2
-                || (!estadoLimpo.isEmpty() && !estadoLimpo.matches("[A-Z]{2}"))
-                || cidadeLimpa.isEmpty() != estadoLimpo.isEmpty()) {
-            redirectAttributes.addFlashAttribute(
-                    "erroPerfil", "Informe cidade e UF juntas (ou deixe os dois campos vazios).");
+        try {
+            perfilService.atualizarLocalizacao(uid, cidade, estado);
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("erroPerfil", e.getMessage());
             return "redirect:/perfil#editar";
+        } catch (NoSuchElementException e) {
+            return "redirect:/login";
         }
-
-        usuario.setCidade(cidadeLimpa.isEmpty() ? null : cidadeLimpa);
-        usuario.setEstado(estadoLimpo.isEmpty() ? null : estadoLimpo);
-        usuarioRepository.save(usuario);
         redirectAttributes.addFlashAttribute("sucessoPerfil", "Perfil atualizado.");
         return "redirect:/perfil";
     }
 
-    @PostMapping("/perfil/foto")
-    @Transactional
-    public ResponseEntity<Void> salvarFoto(
-            @RequestBody FotoPerfilRequest body,
-            HttpServletRequest request) {
-
-        Usuario usuario = usuarioDaSessao(request);
-        if (usuario == null) {
+    @PostMapping(value = "/perfil/foto", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, String>> salvarFoto(@RequestParam("foto") MultipartFile foto,
+                                                          HttpServletRequest request) {
+        String uid = uidDaSessao(request);
+        if (uid == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        if (body == null || !fotoPertenceAoUsuario(body.photoUrl(), usuario.getFirebaseUid())) {
-            return ResponseEntity.badRequest().build();
+        try {
+            String url = perfilService.atualizarFoto(uid, foto);
+            return ResponseEntity.ok(Map.of("photoUrl", url));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("erro", "Não foi possível salvar a imagem no servidor."));
         }
-
-        usuario.setFotoUrl(body.photoUrl());
-        usuarioRepository.save(usuario);
-        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/perfil/seguir/{id}")
-    @Transactional
     public String seguir(@PathVariable Long id, HttpServletRequest request) {
-        Usuario usuario = usuarioDaSessao(request);
-        Usuario seguido = usuarioRepository.findById(id).orElse(null);
-        if (usuario == null || seguido == null || usuario.getUsuCodigo().equals(id)) {
-            return "redirect:/perfil";
+        String uid = uidDaSessao(request);
+        if (uid == null) {
+            return "redirect:/login";
         }
-
-        boolean jaSegue = usuario.getSeguindo().stream()
-                .anyMatch(pessoa -> pessoa.getUsuCodigo().equals(id));
-        if (!jaSegue) {
-            usuario.getSeguindo().add(seguido);
-            usuarioRepository.save(usuario);
-        }
+        perfilService.seguir(uid, id);
         return "redirect:/perfil";
     }
 
     @PostMapping("/perfil/deixar-de-seguir/{id}")
-    @Transactional
     public String deixarDeSeguir(@PathVariable Long id, HttpServletRequest request) {
-        Usuario usuario = usuarioDaSessao(request);
-        if (usuario == null) {
+        String uid = uidDaSessao(request);
+        if (uid == null) {
             return "redirect:/login";
         }
-        usuario.getSeguindo().removeIf(pessoa -> pessoa.getUsuCodigo().equals(id));
-        usuarioRepository.save(usuario);
+        perfilService.deixarDeSeguir(uid, id);
         return "redirect:/perfil";
     }
 
-    private void preencherPerfil(
-            Usuario usuarioPerfil,
-            Usuario usuarioLogado,
-            Model model,
-            HttpServletRequest request,
-            int pagina) {
-        var rotulos = tabelaNutricionalService.listarPorUsuario(usuarioPerfil.getUsuCodigo());
-        boolean proprioPerfil = usuarioLogado != null
-                && usuarioPerfil.getUsuCodigo().equals(usuarioLogado.getUsuCodigo());
-        Set<Long> seguindoIds = usuarioLogado == null
-                ? Set.of()
-                : usuarioLogado.getSeguindo().stream()
-                        .map(Usuario::getUsuCodigo)
-                        .collect(Collectors.toCollection(HashSet::new));
+    // ── auxiliares (só coisas de HTTP) ──
 
-        model.addAttribute("usuarioPerfil", usuarioPerfil);
-        model.addAttribute("proprioPerfil", proprioPerfil);
-        model.addAttribute("rotulos", rotulos);
-        model.addAttribute("seguindo", usuarioPerfil.getSeguindo());
-        model.addAttribute("seguidores", usuarioPerfil.getSeguidores());
-        model.addAttribute("seguindoIds", seguindoIds);
-        Page<Usuario> pessoasPage = proprioPerfil
-                ? usuarioRepository.findAllByUsuCodigoNotOrderByNomeAsc(
-                        usuarioPerfil.getUsuCodigo(), PageRequest.of(Math.max(0, pagina), 20))
-                : Page.empty();
-        model.addAttribute("pessoasParaSeguir", pessoasPage.getContent());
-        model.addAttribute("paginaPessoas", pessoasPage);
-        model.addAttribute("totalRotulos", rotulos.size());
-        model.addAttribute("totalSeguindo", usuarioPerfil.getSeguindo().size());
-        model.addAttribute("totalSeguidores", usuarioPerfil.getSeguidores().size());
-        model.addAttribute("membroDesde", usuarioPerfil.getCriadoEm() == null
-                ? ""
-                : usuarioPerfil.getCriadoEm().toLocalDate().format(DATA_MEMBRO_FORMAT));
-        model.addAttribute("firebaseWeb", firebaseWeb);
+    private String uidDaSessao(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session != null && session.getAttribute("uid") instanceof String uid) {
+            return uid;
+        }
+        return null;
+    }
+
+    /** Copia os dados do service para o Model, com os mesmos nomes que o perfil.html já usa. */
+    private String montarPagina(PerfilView v, Model model, HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session == null) {
             throw new IllegalStateException("A sessão autenticada deveria estar disponível no perfil.");
         }
+        model.addAttribute("usuarioPerfil", v.usuarioPerfil());
+        model.addAttribute("proprioPerfil", v.proprioPerfil());
+        model.addAttribute("rotulos", v.rotulos());
+        model.addAttribute("seguindo", v.usuarioPerfil().getSeguindo());
+        model.addAttribute("seguidores", v.usuarioPerfil().getSeguidores());
+        model.addAttribute("seguindoIds", v.seguindoIds());
+        model.addAttribute("pessoasParaSeguir", v.pessoasPage().getContent());
+        model.addAttribute("paginaPessoas", v.pessoasPage());
+        model.addAttribute("totalRotulos", v.totalRotulos());
+        model.addAttribute("totalSeguindo", v.totalSeguindo());
+        model.addAttribute("totalSeguidores", v.totalSeguidores());
+        model.addAttribute("membroDesde", v.membroDesde());
         model.addAttribute("csrfToken", csrfTokenService.tokenFor(session));
-    }
-
-    private Usuario usuarioDaSessao(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session == null || !(session.getAttribute("uid") instanceof String uid)) {
-            return null;
-        }
-        return usuarioRepository.findProfileByFirebaseUid(uid).orElse(null);
-    }
-
-    private boolean fotoPertenceAoUsuario(String photoUrl, String uid) {
-        String bucket = firebaseWeb.getStorageBucket();
-        if (photoUrl == null || bucket == null || bucket.isBlank() || uid == null) {
-            return false;
-        }
-        try {
-            URI uri = URI.create(photoUrl);
-            String prefixoObjeto = "/v0/b/" + bucket + "/o/";
-            if (!"https".equals(uri.getScheme())
-                    || !"firebasestorage.googleapis.com".equals(uri.getHost())
-                    || uri.getRawPath() == null
-                    || !uri.getRawPath().startsWith(prefixoObjeto)
-                    || uri.getRawQuery() == null
-                    || !Pattern.compile("(?:^|&)token=[^&]+(?:&|$)").matcher(uri.getRawQuery()).find()) {
-                return false;
-            }
-
-            String objeto = URLDecoder.decode(
-                    uri.getRawPath().substring(prefixoObjeto.length()), StandardCharsets.UTF_8);
-            String padraoObjeto = "^profile-photos/" + Pattern.quote(uid)
-                    + "/avatar-[0-9]+\\.(?:jpg|png|webp)$";
-            return objeto.matches(padraoObjeto);
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-    }
-
-    public record FotoPerfilRequest(String photoUrl) {
+        return "perfil";
     }
 }
