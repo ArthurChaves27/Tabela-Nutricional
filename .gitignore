@@ -5,6 +5,8 @@ target/
 *.class
 *.log
 .DS_Store
+uploads/
+
 
 application-local.properties
 
